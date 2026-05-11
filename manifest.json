@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Falcon Tab",
+  "version": "3.0",
+  "description": "A feature-rich, AI-powered new tab dashboard with weather, bookmarks, drag-drop layout, and more.",
+  "permissions": [
+    "storage",
+    "topSites",
+    "bookmarks",
+    "favicon",
+    "notifications"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "dashboard.html"
+  },
+  "host_permissions": [
+    "https://*.google.com/",
+    "https://api.open-meteo.com/*",
+    "https://api.bigdatacloud.net/*",
+    "http://ip-api.com/*",
+    "https://image.pollinations.ai/*",
+    "https://uselessfacts.jsph.pl/*",
+    "https://api.duckduckgo.com/*",
+    "https://www.artificialintelligence-news.com/*",
+    "https://api.alquran.cloud/*",
+    "https://feeds.bbci.co.uk/*",
+    "https://unpkg.com/*",
+    "https://cdn.jsdelivr.net/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "action": {
+    "default_popup": "settings.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

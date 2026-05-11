@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Falcon Tab Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <div class="close-cog-container">
+        <a href="dashboard.html" id="close-link" class="close-cog">&#10006;</a>
+    </div>
+    <div class="container">
+        <h1>⚙️ Falcon Tab Settings</h1>
+
+        <div class="setting-card">
+            <h2>🔍 Search Engine</h2>
+            <select id="search-engine">
+                <option value="https://www.google.com/search?q=">Google</option>
+                <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+                <option value="https://www.bing.com/search?q=">Bing</option>
+            </select>
+        </div>
+
+        <div class="setting-card">
+            <h2>🌡️ Temperature Unit</h2>
+            <div class="toggle-group">
+                <button class="toggle-btn active" data-value="C" id="temp-c">°C Celsius</button>
+                <button class="toggle-btn" data-value="F" id="temp-f">°F Fahrenheit</button>
+            </div>
+        </div>
+
+        <div class="setting-card">
+            <h2>🖼️ Background</h2>
+            <p>Leave blank for weather-based wallpapers from Unsplash, or enter a custom URL.</p>
+            <input type="text" id="background-url" placeholder="https://example.com/image.jpg">
+        </div>
+
+        <div class="setting-card">
+            <h2>🔗 Quick Links</h2>
+            <p>Customize your shortcuts.</p>
+            <div id="shortcuts-list"></div>
+            <button id="add-shortcut" class="btn-secondary">+ Add Link</button>
+        </div>
+
+        <div class="setting-card">
+            <h2>📰 Latest News RSS Feeds</h2>
+            <p>Add news feed sources for the main news block.</p>
+            <div id="rss-feeds-list"></div>
+            <button id="add-rss-feed" class="btn-secondary">+ Add News Feed</button>
+        </div>
+
+        <div class="setting-card">
+            <h2>📈 Stories RSS Feeds</h2>
+            <p>RSS feeds for the "Stories you shouldn't miss" horizontal bar at the bottom. Add multiple sources for variety.</p>
+            <div id="stories-feeds-list"></div>
+            <button id="add-stories-feed" class="btn-secondary">+ Add Stories Feed</button>
+        </div>
+
+        <div class="setting-card">
+            <h2>🔧 Layout</h2>
+            <p>Reset block positions and sizes to defaults.</p>
+            <button id="reset-layout" class="btn-danger">Reset Layout</button>
+        </div>
+
+        <button id="save-settings" class="btn-primary">💾 Save and Close</button>
+        <div id="status-message"></div>
+    </div>
+    <script src="settings.js"></script>
+</body>
+</html>

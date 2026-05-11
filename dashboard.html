@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- Preload cached wallpaper before render to prevent flash -->
+    <script src="preload.js"></script>
+</head>
+<body>
+    <!-- Settings Cog -->
+    <div id="settings-cog-container">
+        <a href="settings.html" id="settings-link" title="Settings">
+            <img src="icons/settings-icon.png" alt="Settings" id="settings-cog">
+        </a>
+    </div>
+
+    <!-- Daily Fact Banner -->
+    <div id="fact-banner" class="fact-banner">
+        <img src="https://img.icons8.com/color/24/000000/idea.png" class="header-icon" id="fact-icon">
+        <span id="fact-text">Loading a fun fact...</span>
+    </div>
+
+    <main class="container">
+        <!-- Top Hero -->
+        <div class="top-section">
+            <div id="clock" class="clock"></div>
+            <div id="date-display" class="date-display"></div>
+            <h1 id="greeting"></h1>
+            <form id="search-form">
+                <div class="search-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="search" id="search-input" placeholder="Search the web..." autocomplete="off">
+                </div>
+            </form>
+        </div>
+
+
+        <!-- Drag & Drop Grid -->
+        <div id="blocks-grid" class="blocks-grid">
+
+            <!-- Weather -->
+            <div class="block" data-block-id="weather" data-size="1x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/partly-cloudy-day--v1.png" class="header-icon"> Weather</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div id="weather-content" class="block-body">
+                    <div class="skeleton-loader"></div>
+                </div>
+            </div>
+
+            <!-- Top Sites -->
+            <div class="block" data-block-id="topsites" data-size="2x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/domain.png" class="header-icon"> Recent Sites</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div id="top-sites-grid" class="block-body shortcut-grid"></div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="block" data-block-id="shortcuts" data-size="1x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/link--v1.png" class="header-icon"> Quick Links</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div id="shortcuts-grid" class="block-body shortcut-grid"></div>
+            </div>
+
+            <!-- AI Chat -->
+            <div class="block" data-block-id="aichat" data-size="1x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/bot.png" class="header-icon"> AI Chat</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div class="block-body ai-chat-body">
+                    <div id="ai-chat-messages" class="ai-chat-messages">
+                        <div class="ai-msg ai-msg-bot">Hi! Ask me anything ✨</div>
+                    </div>
+                    <form id="ai-chat-form" class="ai-chat-form">
+                        <input type="text" id="ai-chat-input" placeholder="Ask AI..." autocomplete="off">
+                        <button type="submit" class="ai-send-btn"><img src="https://img.icons8.com/color/20/000000/paper-plane.png" alt="Send"></button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bookmarks -->
+            <div class="block" data-block-id="bookmarks" data-size="1x2" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/bookmark-ribbon.png" class="header-icon"> Bookmarks</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div class="block-body bookmarks-body">
+                    <input type="text" id="bookmarks-search" placeholder="Search bookmarks..." class="bookmarks-search">
+                    <div id="bookmarks-tree" class="bookmarks-tree"></div>
+                </div>
+            </div>
+
+            <!-- News -->
+            <div class="block" data-block-id="news" data-size="2x2" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/news.png" class="header-icon"> Latest News</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div class="block-body news-body">
+                    <div id="news-content"><p class="placeholder">Loading news...</p></div>
+                    <div id="news-stats" class="news-stats"></div>
+                </div>
+            </div>
+
+            <!-- Quick Notes -->
+            <div class="block" data-block-id="notes" data-size="1x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/edit--v1.png" class="header-icon"> Notes <span id="notes-save-indicator" class="save-indicator"></span></span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div class="block-body">
+                    <textarea id="quick-notes" placeholder="Type notes here... (auto-saves)"></textarea>
+                </div>
+            </div>
+
+            <!-- Focus Timer -->
+            <div class="block" data-block-id="timer" data-size="1x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/time.png" class="header-icon"> Focus Timer</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div class="block-body timer-body">
+                    <div class="timer-ring-wrapper">
+                        <svg class="timer-ring" viewBox="0 0 120 120">
+                            <circle class="timer-ring-bg" cx="60" cy="60" r="54"/>
+                            <circle id="timer-ring-progress" class="timer-ring-progress" cx="60" cy="60" r="54"/>
+                        </svg>
+                        <div class="timer-display"><span id="timer-minutes">25</span>:<span id="timer-seconds">00</span></div>
+                    </div>
+                    <div class="timer-controls">
+                        <button id="timer-start" class="timer-btn" title="Start"><img src="https://img.icons8.com/color/24/000000/play.png" alt="Start"></button>
+                        <button id="timer-pause" class="timer-btn" title="Pause" style="display:none"><img src="https://img.icons8.com/color/24/000000/pause.png" alt="Pause"></button>
+                        <button id="timer-reset" class="timer-btn" title="Reset"><img src="https://img.icons8.com/color/24/000000/restart.png" alt="Reset"></button>
+                    </div>
+                    <div class="timer-presets">
+                        <button class="timer-preset active" data-minutes="25">25m</button>
+                        <button class="timer-preset" data-minutes="15">15m</button>
+                        <button class="timer-preset" data-minutes="5">5m</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Updates -->
+            <div class="block" data-block-id="ainews" data-size="1x1" draggable="true">
+                <div class="block-header">
+                    <span class="block-title"><img src="https://img.icons8.com/color/24/000000/brain.png" class="header-icon"> AI Updates</span>
+                    <div class="block-controls">
+                        <button class="block-resize" title="Resize">⤢</button>
+                        <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
+                    </div>
+                </div>
+                <div id="ai-news-content" class="block-body ai-news-body">
+                    <div class="skeleton-loader"></div>
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- Stories / Explore Bar -->
+        <div class="bottom-stories-container">
+            <h3 class="stories-heading"><img src="https://img.icons8.com/color/24/000000/line-chart.png" class="header-icon"> Stories you shouldn't miss</h3>
+            <div class="stories-wrapper">
+                <button id="stories-scroll-left" class="stories-nav-btn">‹</button>
+                <div id="stories-scroll" class="stories-scroll bottom-stories"></div>
+                <button id="stories-scroll-right" class="stories-nav-btn">›</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
