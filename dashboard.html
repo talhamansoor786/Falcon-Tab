@@ -10,6 +10,13 @@
     <script src="preload.js"></script>
 </head>
 <body>
+    <!-- Custom background image layers -->
+    <div id="custom-bg-layer"></div>
+    <div id="custom-bg-overlay"></div>
+
+    <!-- Full-screen Dynamic Animated SVG Background -->
+    <div id="dashboard-bg"></div>
+
     <!-- Settings Cog -->
     <div id="settings-cog-container">
         <a href="settings.html" id="settings-link" title="Settings">
@@ -17,20 +24,9 @@
         </a>
     </div>
 
-    <!-- Change Background Button -->
-    <div id="change-bg-container">
-        <button id="change-bg-btn" title="Change Background Image">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="change-bg-icon">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-            </svg>
-        </button>
-    </div>
-
-    <!-- Daily Fact Banner -->
+    <!-- Daily Quote Banner -->
     <div id="fact-banner" class="fact-banner">
-        <span id="fact-text">Loading a fun fact...</span>
+        <span id="fact-text"></span><span id="quote-author"></span>
     </div>
 
     <main class="container">
@@ -38,7 +34,6 @@
         <div class="top-section">
             <div id="clock" class="clock"></div>
             <div id="date-display" class="date-display"></div>
-            <h1 id="greeting"></h1>
             <form id="search-form">
                 <div class="search-wrapper">
                     <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -94,6 +89,7 @@
                 <div class="block-header">
                     <span class="block-title"><img src="https://img.icons8.com/color/24/000000/bot.png" class="header-icon"> AI Chat</span>
                     <div class="block-controls">
+                        <a id="ai-key-guide-btn" href="api-guide.html#openrouter" target="_blank" class="key-guide-btn" title="How to get your free OpenRouter API key" style="display:none">🔑 Get API Key</a>
                         <button class="block-resize" title="Resize">⤢</button>
                         <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
                     </div>
@@ -148,7 +144,7 @@
                         <span class="block-drag-handle" title="Drag to reorder">⋮⋮</span>
                     </div>
                 </div>
-                <div class="block-body">
+                <div class="block-body notes-body">
                     <textarea id="quick-notes" placeholder="Type notes here... (auto-saves)"></textarea>
                 </div>
             </div>

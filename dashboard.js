@@ -4,38 +4,39 @@ document.addEventListener("DOMContentLoaded", () => {
 	const setL = (o) => new Promise((r) => chrome.storage.local.set(o, r));
 	const getS = (k) => new Promise((r) => chrome.storage.sync.get(k, r));
 	const setS = (o) => new Promise((r) => chrome.storage.sync.set(o, r));
-	const msg = (a, d = {}) => new Promise((r) => chrome.runtime.sendMessage({ action: a, ...d }, r));
+	const msg = (a, d = {}) =>
+		new Promise((resolve) =>
+			chrome.runtime.sendMessage({ action: a, ...d }, (response) => {
+				if (chrome.runtime.lastError) {
+					resolve({ success: false, error: chrome.runtime.lastError.message });
+				} else {
+					resolve(response);
+				}
+			}),
+		);
 
-	// ===== GREETING & AUTO-REFRESH =====
-	let lastCheckedHour = new Date().getHours();
+	const escapeHtml = (str) => {
+		if (!str) return "";
+		return String(str)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
+	};
 
-	const loadAIGreeting = async () => {
-		const CK = "aiGreetingCache",
-			TTL = 60 * 60 * 1000;
-		const s = await getS(["aiGreetingStyle", "openRouterKey"]);
-		const style = s.aiGreetingStyle || "funny";
-		const st = await getL([CK]);
-		const ca = st[CK];
-		const now = new Date();
-		const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-		// Use cache if same style, within 1 hour, and same clock hour
-		if (ca && ca.style === style && Date.now() - ca.ts < TTL && new Date(ca.ts).getHours() === now.getHours()) {
-			$("greeting").textContent = ca.greeting;
-			return;
-		}
-
+	// Validate URLs — ensure only http/https are allowed in href/src attributes
+	const safeUrl = (url) => {
 		try {
-			const r = await msg("FETCH_AI_GREETING", { timeStr, style, openRouterKey: s.openRouterKey });
-			if (r?.success) {
-				await setL({ [CK]: { greeting: r.answer, style, ts: Date.now() } });
-				$("greeting").textContent = r.answer;
-			} else throw new Error();
-		} catch (e) {
-			const h = now.getHours();
-			$("greeting").textContent = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+			const u = new URL(url);
+			return (u.protocol === "https:" || u.protocol === "http:") ? url : "#";
+		} catch {
+			return "#";
 		}
 	};
+
+	// ===== CLOCK & AUTO-REFRESH =====
+	let lastCheckedHour = new Date().getHours();
 
 	const updateClock = () => {
 		const n = new Date();
@@ -45,25 +46,13 @@ document.addEventListener("DOMContentLoaded", () => {
 		const currentHour = n.getHours();
 		if (currentHour !== lastCheckedHour) {
 			lastCheckedHour = currentHour;
-			loadAIGreeting();
 			loadWeather();
 		}
 	};
 	updateClock();
 	setInterval(updateClock, 1000);
 
-	// ===== CHANGE BACKGROUND =====
-	const changeBgBtn = $("change-bg-btn");
-	if (changeBgBtn) {
-		changeBgBtn.addEventListener("click", async () => {
-			changeBgBtn.style.opacity = "0.5";
-			changeBgBtn.style.pointerEvents = "none";
-			await setL({ wallpaperCache: null });
-			await loadWeather();
-			changeBgBtn.style.opacity = "1";
-			changeBgBtn.style.pointerEvents = "auto";
-		});
-	}
+
 
 	// ===== SEARCH =====
 	getS(["searchEngine"]).then((d) => {
@@ -223,10 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		return "Clear";
 	};
 
-	window.testWeatherCondition = (name) => {
-		window._testWeatherCondition = name;
-		loadWeather(); // Re-trigger weather render
-	};
 
 	const generateWeatherAnimations = (condition, isDay) => {
 		let html = "";
@@ -389,151 +374,15 @@ ${animationsHTML}
 </div>
 </div>
 </div>`;
-		// Apply instant weather-matched gradient so background is never blank or stale
+		// Cache weather condition (background is always solid dark-blue)
 		applyWeatherColor(exactCondition, isDay, code);
-		// Then fetch and fade in the full-resolution Unsplash image
-		loadWallpaper(code, isDay, exactCondition);
 	};
 
-	// ===== WALLPAPER =====
-
-	// Instant solid-color palette: set as body background BEFORE the image loads
-	const WEATHER_SOLID_COLORS = {
-		// Day
-		Clear: "#1e6fa0",
-		"Mostly Clear": "#2277aa",
-		"Partly Cloudy": "#4a6a7a",
-		Cloudy: "#4a5568",
-		Fog: "#5a6272",
-		Haze: "#6b7280",
-		Drizzle: "#3d5060",
-		Rain: "#2d3748",
-		"Heavy Rain": "#1a202c",
-		"Sun Showers": "#4a6080",
-		"Freezing Drizzle": "#3a4a5a",
-		"Freezing Rain": "#2a3a4a",
-		Flurries: "#5a6a7a",
-		Snow: "#6a7d8f",
-		"Heavy Snow": "#7a8fa0",
-		"Scattered Snow": "#5a6a7a",
-		Sleet: "#3a4a58",
-		Hail: "#2e3c4a",
-		"Isolated Thunderstorms": "#1e2832",
-		Thunderstorms: "#181e28",
-		"Scattered Thunderstorms": "#1e2830",
-		Windy: "#2a4060",
-		Breezy: "#2a5070",
-		Hot: "#7a4a10",
-		Frigid: "#1a2a3a",
-		Dust: "#7a6040",
-		Sandstorm: "#8a6030",
-		"Blowing Snow": "#6a7a8a",
-		"Wintry Mix": "#3a4a58",
-		"Tropical Storm": "#1a2030",
-		Hurricane: "#100e18",
-		Tornado: "#0e1018",
-		// Night variants (darker)
-		__night_Clear: "#0a1628",
-		"__night_Mostly Clear": "#0d1a30",
-		"__night_Partly Cloudy": "#1a2232",
-		__night_Cloudy: "#1a1a2e",
-	};
+	// ===== WEATHER COLOR (caches condition only — background is solid CSS colour) =====
 	const applyWeatherColor = (condition, isDay, code) => {
-		let gradient = "linear-gradient(135deg, #0d0f1a 0%, #1a1a2e 100%)"; // default
-
-		if (code <= 1) gradient = isDay ? "linear-gradient(135deg,#1e6fa0 0%,#58b0d4 60%,#a0d4e8 100%)" : "linear-gradient(135deg,#0a1628 0%,#152242 40%,#1a2a4a 100%)";
-		else if (code <= 48) gradient = isDay ? "linear-gradient(135deg,#4a5568 0%,#718096 60%,#a0aec0 100%)" : "linear-gradient(135deg,#1a1a2e 0%,#2d2d44 60%,#1a1a2e 100%)";
-		else if (code <= 67 || (code >= 80 && code <= 82)) gradient = isDay ? "linear-gradient(135deg,#2d3748 0%,#4a5568 50%,#1a202c 100%)" : "linear-gradient(135deg,#0d1117 0%,#1a2332 50%,#0d1117 100%)";
-		else if (code <= 77) gradient = isDay ? "linear-gradient(135deg,#c4d5e3 0%,#8ab4c9 50%,#5a8ea0 100%)" : "linear-gradient(135deg,#1a2030 0%,#2a3545 50%,#1a2030 100%)";
-		else gradient = isDay ? "linear-gradient(135deg,#2d3748 0%,#4a5568 50%,#1a202c 100%)" : "linear-gradient(135deg,#0d1117 0%,#1a2332 50%,#0d1117 100%)";
-
-		document.body.style.backgroundImage = 'none';
-		document.body.style.background = gradient;
-		setL({ cachedWeatherBg: gradient, cachedWeatherCode: code });
+		setL({ cachedWeatherCode: code, cachedWeatherCondition: condition });
 	};
 
-	const loadWallpaper = async (weatherCode, isDay, exactCondition) => {
-		// Cache key: combination of condition name + day/night flag.
-		// Only fetch a new image when weather or day↔night actually changes.
-		const CK = "wallpaperCache";
-		const st = await getL([CK]);
-		const ca = st[CK];
-		const conditionKey = exactCondition + (isDay ? "_day" : "_night");
-		if (ca && ca.url && ca.conditionKey === conditionKey) {
-			// Same weather + same time-of-day → reuse cached image (still decode fresh, never flash old)
-			applyWallpaper(ca.url);
-			return;
-		}
-		// Map each exact weather condition to a sky-focused, people-free Unsplash query
-		const SKY_QUERIES = {
-			Clear: isDay ? "clear blue sky sunshine rays" : "clear night sky stars milky way",
-			"Mostly Clear": isDay ? "bright sunny sky few clouds" : "moonlit clear night sky",
-			"Partly Cloudy": isDay ? "partly cloudy sky white clouds sunlight" : "partly cloudy night sky moon",
-			Cloudy: isDay ? "overcast grey cloudy sky" : "dark overcast night sky clouds",
-			Fog: "foggy misty landscape fog",
-			Haze: "hazy sky atmospheric haze horizon",
-			Drizzle: "light drizzle rainy sky grey clouds",
-			Rain: isDay ? "rainy sky dark storm clouds" : "rainy night sky storm",
-			"Heavy Rain": "heavy rain dark stormy sky dramatic clouds",
-			"Sun Showers": "rain and sunshine sky rainbow clouds",
-			"Freezing Drizzle": "freezing drizzle icy sky winter grey",
-			"Freezing Rain": "freezing rain icy storm sky",
-			Flurries: "light snow flurries overcast sky winter",
-			Snow: "snowy landscape sky snowfall winter",
-			"Heavy Snow": "heavy snowfall blizzard white sky",
-			"Scattered Snow": "scattered snow cloudy winter sky",
-			Sleet: "sleet icy rain dark winter sky",
-			Hail: "hail storm dramatic dark sky lightning",
-			"Isolated Thunderstorms": "thunderstorm lightning dark dramatic sky",
-			Thunderstorms: "thunderstorm lightning storm clouds dramatic sky",
-			"Scattered Thunderstorms": "scattered thunderstorms lightning clouds sky",
-			Windy: isDay ? "windy sky dynamic clouds movement" : "windy night sky dark moving clouds",
-			Breezy: "breezy sky light clouds blue sky",
-			Hot: "scorching hot sunny sky heat haze desert",
-			Frigid: "frigid cold winter sky ice frost landscape",
-			Dust: "dust haze brown sky dry landscape",
-			Sandstorm: "sandstorm dust storm orange sky desert",
-			"Blowing Snow": "blowing snow white sky blizzard wind",
-			"Wintry Mix": "wintry mix sleet snow grey sky",
-			"Tropical Storm": "tropical storm dark sky dramatic clouds",
-			Hurricane: "hurricane dark stormy sky",
-			Tornado: "tornado dramatic dark storm sky",
-		};
-		const q = (SKY_QUERIES[exactCondition] || (isDay ? "sky landscape daytime nature" : "night sky landscape stars dark midnight")) + (isDay ? " sky landscape no people" : " dark night midnight no people");
-		const _r = window.screen.width / window.screen.height;
-		const _orientation = _r < 0.9 ? "portrait" : _r <= 1.1 ? "squarish" : "landscape";
-		try {
-			const r = await msg("FETCH_WALLPAPER", {
-				query: q,
-				orientation: _orientation,
-				width: window.screen.width,
-				height: window.screen.height,
-			});
-			if (r?.success && r.imageUrl) {
-				// Save url + the condition key so next open can compare
-				await setL({ [CK]: { url: r.imageUrl, conditionKey } });
-				applyWallpaper(r.imageUrl);
-			}
-		} catch (e) {
-			console.warn("Wallpaper fetch failed", e);
-		}
-	};
-
-	// Fully decode the image off-screen FIRST, then swap in with a smooth fade.
-	// The weather-color solid background stays visible until decode is complete.
-	const applyWallpaper = (url) => {
-		const img = new Image();
-		img.onload = () => {
-			const s = document.body.style;
-			// Crossfade: transition only background-image
-			s.backgroundImage = `linear-gradient(rgba(0,0,0,0.38),rgba(0,0,0,0.52)),url(${url})`;
-			s.backgroundSize = "cover";
-			s.backgroundRepeat = "no-repeat";
-			s.backgroundPosition = "center";
-			s.backgroundAttachment = "fixed";
-		};
-		img.src = url;
-	};
 
 	const loadWeather = async () => {
 		const CK = "weatherCache",
@@ -583,17 +432,148 @@ ${animationsHTML}
 		}
 	};
 
-	// ===== DAILY QUOTE =====
+	// ===== DAILY QUOTE (Hardcoded — cycles in order) =====
+	const QUOTES = [
+		{ text: "Ships are safe in harbor, but that's not what they were built for." },
+		{ text: "Reputation is what people think of you; character is what you are." },
+		{ text: "Until the lion learns to write, every story will glorify the hunter." },
+		{ text: "Everyone dies. Not everyone truly lives." },
+		{ text: "When wealth is lost, nothing is lost. When health is lost, something is lost. When character is lost, everything is lost." },
+		{ text: "Power doesn't corrupt. It reveals." },
+		{ text: "The eye sees only what the mind is prepared to comprehend." },
+		{ text: "We don't see things as they are; we see them as we are." },
+		{ text: "A lie can travel halfway around the world while the truth is still putting on its shoes." },
+		{ text: "When people show you who they are, believe them the first time.", author: "Maya Angelou" },
+		{ text: "A person often meets his destiny on the road he took to avoid it." },
+		{ text: "Hard times create strong men. Strong men create good times. Good times create weak men. Weak men create hard times." },
+		{ text: "A smooth sea never made a skilled sailor." },
+		{ text: "It is the mark of an educated mind to entertain a thought without accepting it.", author: "Aristotle" },
+		{ text: "The axe forgets, but the tree remembers." },
+		{ text: "If you don't make time for your wellness, you will be forced to make time for your illness." },
+		{ text: "Never be so busy making a living that you forget to make a life." },
+		{ text: "The child who is not embraced by the village will burn it down to feel its warmth.", author: "African Proverb" },
+		{ text: "The hardest choices require the strongest wills." },
+		{ text: "It is possible to commit no mistakes and still lose. That is not weakness; that is life." },
+		{ text: "A man who views the world the same at fifty as he did at twenty has wasted thirty years of his life.", author: "Muhammad Ali" },
+		{ text: "The lion does not concern himself with the opinion of sheep.", author: "Game of Thrones" },
+		{ text: "A king who must say 'I am the king' is no true king.", author: "Game of Thrones" },
+		{ text: "You either die a hero or live long enough to see yourself become the villain.", author: "The Dark Knight" },
+		{ text: "A wise man learns more from his enemies than a fool from his friends." },
+		{ text: "When a clown moves into a palace, he doesn't become a king. The palace becomes a circus." },
+		{ text: "Never wrestle with a pig. You both get dirty, and the pig likes it." },
+		{ text: "The truth does not mind being questioned. A lie does not like being challenged." },
+		{ text: "Three things cannot be long hidden: the sun, the moon, and the truth.", author: "Gautama Buddha" },
+		{ text: "If fifty million people say a foolish thing, it is still a foolish thing." },
+		{ text: "Facts do not cease to exist because they are ignored." },
+		{ text: "Your habits will determine your future long before your future arrives." },
+		{ text: "Be careful what you tolerate. You are teaching people how to treat you." },
+		{ text: "Discipline weighs ounces. Regret weighs tons." },
+		{ text: "The man who loves walking will walk farther than the man who loves the destination." },
+		{ text: "The temptation to quit will be greatest just before you are about to succeed." },
+		{ text: "The difference between who you are and who you want to be is what you do." },
+		{ text: "The same sun that melts wax hardens clay." },
+		{ text: "Excuses make today easy but tomorrow hard. Discipline makes today hard but tomorrow easy." },
+		{ text: "He who cannot obey himself will be commanded.", author: "Friedrich Nietzsche" },
+		{ text: "The first man to compare a woman to a rose was a poet. The second was an idiot.", author: "Voltaire" },
+		{ text: "Knowing others is intelligence; knowing yourself is true wisdom.", author: "Lao Tzu" },
+		{ text: "The fool speaks because he has to say something. The wise man speaks because he has something to say." },
+		{ text: "You spend your whole life climbing the ladder only to discover it was leaning against the wrong wall." },
+		{ text: "Do not fear moving slowly. Fear standing still." },
+		{ text: "People judge others by actions and themselves by intentions." },
+		{ text: "Many people die at twenty-five and aren't buried until seventy-five.", author: "Benjamin Franklin" },
+		{ text: "It is difficult to free fools from the chains they revere." },
+		{ text: "The pain of discipline is temporary. The pain of regret is permanent." },
+		{ text: "The fish sees the bait, not the hook." },
+		{ text: "The hunter who chases two rabbits catches neither." },
+		{ text: "The man who asks a question is a fool for a minute. The man who never asks is a fool for life." },
+		{ text: "A candle loses nothing by lighting another candle." },
+		{ text: "What consumes your mind controls your life." },
+		{ text: "The chains of habit are too weak to be felt until they are too strong to be broken." },
+		{ text: "The person who has nothing to die for has nothing to live for." },
+		{ text: "A hungry stomach, an empty pocket, and a broken heart can teach the best lessons." },
+		{ text: "Most people want to be heard, not helped." },
+		{ text: "The same people who applaud your success will resent it if it surpasses theirs." },
+		{ text: "Many people listen to reply. Few listen to understand." },
+		{ text: "A calm man in a storm is more powerful than a hundred men in sunshine." },
+		{ text: "Ego is the enemy of growth." },
+		{ text: "A man who is certain he is right has already stopped looking for the truth." },
+		{ text: "Lost wealth can be regained. Lost time cannot." },
+		{ text: "The less people know, the more they usually talk." },
+		{ text: "If you avoid conflict to keep the peace, you start a war inside yourself." },
+		{ text: "Not making a decision is a decision." },
+		{ text: "He suffers more than necessary who suffers before it is necessary.", author: "Seneca" },
+		{ text: "No man steps into the same river twice, for it is not the same river and he is not the same man.", author: "Heraclitus" },
+		{ text: "Those who cannot be alone are often in bad company." },
+		{ text: "The person who gossips to you will gossip about you." },
+		{ text: "It is easier to fool people than to convince them they have been fooled.", author: "Mark Twain" },
+		{ text: "One day your parents put you down and never pick you up again." },
+		{ text: "Integrity is choosing courage over comfort." },
+		{ text: "Most people overestimate what they can do in a year and underestimate what they can do in ten." },
+		{ text: "Fear does not prevent death. It prevents life." },
+		{ text: "Weak people revenge. Strong people forgive. Intelligent people ignore." },
+		{ text: "The tyrant dies and his rule ends. The martyr dies and his rule begins.", author: "Søren Kierkegaard" },
+		{ text: "The powerful are rarely as powerful as they seem, and the weak are rarely as weak as they seem." },
+		{ text: "The eyes are useless when the mind is blind." },
+		{ text: "Reality does not care what you believe." },
+		{ text: "Trust takes years to build, seconds to break, and forever to repair." },
+		{ text: "You are free to choose your actions, but not free to choose their consequences." },
+		{ text: "A moment of patience can prevent a lifetime of regret." },
+		{ text: "The same person who hurt you cannot become the person who heals you." },
+		{ text: "Fear has killed more dreams than failure ever will." },
+		{ text: "Live as if you were to die tomorrow. Learn as if you were to live forever.", author: "Mahatma Gandhi" },
+		{ text: "If you want something you've never had, you must do something you've never done.", author: "Thomas Jefferson" },
+		{ text: "The higher you rise, the fewer people can tell you when you're wrong." },
+		{ text: "Knowledge tells you a tomato is a fruit. Wisdom tells you not to put it in a fruit salad." },
+		{ text: "Death is so certain that it gives meaning to life." },
+		{ text: "Success introduces you to others. Failure introduces you to yourself." },
+		{ text: "The river reaches the ocean because it learns to bend." },
+		{ text: "It is better to be hated for what you are than to be loved for what you are not." },
+		{ text: "But better to get hurt by the truth than comforted with a lie.", author: "Khaled Hosseini" },
+	];
+
 	const loadQuote = async () => {
 		try {
-			const s = await getS(["apiNinjasKey"]);
-			const r = await msg("FETCH_QUOTE", { apiKey: s.apiNinjasKey });
-			if (r?.success) $("fact-text").textContent = r.fact;
-			else throw new Error();
+			const s = await getS(["quoteIndex"]);
+			const idx = (s.quoteIndex || 0) % QUOTES.length;
+			const q = QUOTES[idx];
+			await setS({ quoteIndex: idx + 1 });
+
+			const textEl = $("fact-text");
+			const authorEl = $("quote-author");
+			textEl.textContent = "\u201C" + q.text + "\u201D";
+			if (q.author) {
+				authorEl.textContent = " \u2014 " + q.author;
+			} else {
+				authorEl.textContent = "";
+			}
+			textEl.classList.add("loaded");
+			authorEl.classList.add("loaded");
 		} catch (e) {
-			$("fact-text").textContent = "Every day is a new opportunity to learn something!";
+			console.warn("Failed to load quote:", e.message);
 		}
 	};
+
+	// ===== AI KEY BUTTON VISIBILITY =====
+	const syncAIKeyBtn = async () => {
+		const s = await getS(["openRouterKey"]);
+		const btn = $("ai-key-guide-btn");
+		if (!btn) return;
+		// Show the "Get API Key" button only when no key is configured
+		btn.style.display = s.openRouterKey ? "none" : "";
+	};
+	// Also make the block controls always visible when key is missing
+	// (override the hover-only opacity rule via an inline flag on the block)
+	const syncAIChatBlockState = async () => {
+		const s = await getS(["openRouterKey"]);
+		const block = document.querySelector('.block[data-block-id="aichat"]');
+		if (!block) return;
+		if (!s.openRouterKey) {
+			block.classList.add("key-missing");
+		} else {
+			block.classList.remove("key-missing");
+		}
+	};
+
 
 	// ===== STORIES (infinite horizontal scroll, multiple feeds) =====
 	let allStoryItems = [];
@@ -608,10 +588,11 @@ ${animationsHTML}
 		for (let i = startIdx; i < end; i++) {
 			const it = allStoryItems[i];
 			const a = document.createElement("a");
-			a.href = it.link;
+			a.href = safeUrl(it.link);
 			a.className = "bottom-story-card";
 			a.target = "_blank";
-			a.innerHTML = `<span class="story-source">${it.source}</span><span class="story-title">${it.title}</span>`;
+			a.rel = "noopener noreferrer";
+			a.innerHTML = `<span class="story-source">${escapeHtml(it.source)}</span><span class="story-title">${escapeHtml(it.title)}</span>`;
 			container.appendChild(a);
 		}
 		storiesRendered = end;
@@ -802,6 +783,10 @@ ${animationsHTML}
 	};
 	const loadTopSites = () => {
 		chrome.topSites.get((s) => {
+			if (chrome.runtime.lastError || !s) {
+				console.warn("Top Sites unavailable:", chrome.runtime.lastError?.message);
+				return;
+			}
 			renderGrid(
 				$("top-sites-grid"),
 				s.slice(0, 16).map((x) => ({ url: x.url, title: x.title || "Site" })),
@@ -817,7 +802,7 @@ ${animationsHTML}
 			a.className = "bm-bookmark";
 			a.href = n.url;
 			a.title = n.title || n.url;
-			a.innerHTML = `<img src="https://img.icons8.com/color/24/000000/${getIconForUrl(n.url)}.png" class="bm-bookmark-icon" alt=""><span>${n.title || n.url}</span>`;
+			a.innerHTML = `<img src="https://img.icons8.com/color/24/000000/${getIconForUrl(n.url)}.png" class="bm-bookmark-icon" alt=""><span>${escapeHtml(n.title || n.url)}</span>`;
 			return a;
 		}
 		if (n.children && n.children.length) {
@@ -825,7 +810,7 @@ ${animationsHTML}
 			f.className = "bm-folder";
 			const h = document.createElement("div");
 			h.className = "bm-folder-header";
-			h.innerHTML = `<span class="bm-folder-arrow">▶</span><img src="https://img.icons8.com/color/24/000000/folder-invoices--v1.png" class="bm-bookmark-icon"><span>${n.title || "Bookmarks"}</span>`;
+			h.innerHTML = `<span class="bm-folder-arrow">▶</span><img src="https://img.icons8.com/color/24/000000/folder-invoices--v1.png" class="bm-bookmark-icon"><span>${escapeHtml(n.title || "Bookmarks")}</span>`;
 			h.addEventListener("click", () => f.classList.toggle("open"));
 			f.appendChild(h);
 			const c = document.createElement("div");
@@ -855,6 +840,11 @@ ${animationsHTML}
 	};
 	const loadBookmarks = () => {
 		chrome.bookmarks.getTree((t) => {
+			if (chrome.runtime.lastError || !t) {
+				console.warn("Bookmarks unavailable:", chrome.runtime.lastError?.message);
+				$("bookmarks-tree").innerHTML = '<div class="bm-no-results">Bookmarks unavailable</div>';
+				return;
+			}
 			bmData = t;
 			renderBMTree(t);
 		});
@@ -869,9 +859,13 @@ ${animationsHTML}
 				return;
 			}
 			chrome.bookmarks.search(q, (res) => {
+				if (chrome.runtime.lastError) {
+					console.warn("Bookmark search failed:", chrome.runtime.lastError.message);
+					return;
+				}
 				const t = $("bookmarks-tree");
 				t.innerHTML = "";
-				if (!res.length) {
+				if (!res || !res.length) {
 					t.innerHTML = '<div class="bm-no-results">No results</div>';
 					return;
 				}
@@ -879,8 +873,8 @@ ${animationsHTML}
 					if (!bm.url) return;
 					const a = document.createElement("a");
 					a.className = "bm-bookmark";
-					a.href = bm.url;
-					a.innerHTML = `<img src="https://img.icons8.com/color/24/000000/${getIconForUrl(bm.url)}.png" class="bm-bookmark-icon" alt=""><span>${bm.title || bm.url}</span>`;
+					a.href = safeUrl(bm.url);
+					a.innerHTML = `<img src="https://img.icons8.com/color/24/000000/${getIconForUrl(bm.url)}.png" class="bm-bookmark-icon" alt=""><span>${escapeHtml(bm.title || bm.url)}</span>`;
 					t.appendChild(a);
 				});
 			});
@@ -888,18 +882,27 @@ ${animationsHTML}
 	});
 
 	// ===== NOTES =====
+	const notesEl = $("quick-notes");
+	// Auto-resize helper: expands textarea height to fit content (fallback for field-sizing:content)
+	const autoResizeNotes = () => {
+		if (CSS.supports("field-sizing", "content")) return; // browser handles it natively
+		notesEl.style.height = "auto";
+		notesEl.style.height = notesEl.scrollHeight + "px";
+	};
 	(async () => {
 		const d = await getL(["quickNotes"]);
-		$("quick-notes").value = d.quickNotes || "";
+		notesEl.value = d.quickNotes || "";
+		autoResizeNotes();
 	})();
 	let nTimer = null;
-	$("quick-notes").addEventListener("input", () => {
+	notesEl.addEventListener("input", () => {
+		autoResizeNotes();
 		clearTimeout(nTimer);
 		const si = $("notes-save-indicator");
 		si.textContent = "saving...";
 		si.classList.add("visible");
 		nTimer = setTimeout(() => {
-			setL({ quickNotes: $("quick-notes").value });
+			setL({ quickNotes: notesEl.value });
 			si.textContent = "✓ saved";
 			setTimeout(() => si.classList.remove("visible"), 1500);
 		}, 600);
@@ -926,7 +929,9 @@ ${animationsHTML}
 			$("timer-start").style.display = "";
 			$("timer-pause").style.display = "none";
 			try {
-				chrome.notifications.create("ft", { type: "basic", iconUrl: "icons/icon128.png", title: "Focus Timer", message: "Time is up! 🎉" });
+				chrome.notifications.clear("ft", () => {
+					chrome.notifications.create("ft", { type: "basic", iconUrl: "icons/icon128.png", title: "Focus Timer", message: "Time is up! 🎉" });
+				});
 			} catch (e) {}
 			return;
 		}
@@ -994,7 +999,7 @@ ${animationsHTML}
 		const match = ca?.feedUrls && ca.feedUrls.length === urls.length && ca.feedUrls.sort().every((u, i) => u === urls[i]);
 		if (ca && match && now - ca.ts < TTL) {
 			renderNews(ca.articles);
-			$("news-stats").textContent = `${Math.min(ca.articles.length, 15)} articles · cached ${Math.round((now - ca.ts) / 60000)}m ago`;
+			$("news-stats").textContent = `${ca.articles.length} articles · cached ${Math.round((now - ca.ts) / 60000)}m ago`;
 			return;
 		}
 		nc.innerHTML = '<p class="placeholder">Fetching news...</p>';
@@ -1006,7 +1011,7 @@ ${animationsHTML}
 							if (!r?.success) return [];
 							const doc = new DOMParser().parseFromString(r.data, "text/xml");
 							return Array.from(doc.querySelectorAll("item,entry"))
-								.slice(0, 10)
+								.slice(0, 15)
 								.map((item) => {
 									const title = item.querySelector("title")?.textContent || "No title";
 									const lEl = item.querySelector("link");
@@ -1021,9 +1026,9 @@ ${animationsHTML}
 						.catch(() => []),
 				),
 			);
-			const articles = nested.flat().sort(() => 0.5 - Math.random());
+			const articles = nested.flat();
 			await setL({ [CK]: { feedUrls: feeds.map((f) => f.url), articles, ts: Date.now() } });
-			$("news-stats").textContent = `${Math.min(articles.length, 15)} articles · just now`;
+			$("news-stats").textContent = `${articles.length} articles · just now`;
 			if (!articles.length) {
 				nc.innerHTML = '<p class="placeholder">No news. Check RSS settings.</p>';
 				return;
@@ -1035,12 +1040,11 @@ ${animationsHTML}
 	};
 	const renderNews = (articles) => {
 		$("news-content").innerHTML = articles
-			.slice(0, 15)
 			.map(
 				(i) => `
 <div class="news-item">
-${i.image ? `<a href="${i.link}" target="_blank" class="news-thumb-link"><img src="${i.image}" class="news-thumb" loading="lazy" alt=""></a>` : ""}
-<div class="news-body-text"><a href="${i.link}" target="_blank" class="news-title">${i.title}</a><span class="news-source">${i.source}</span></div>
+${i.image ? `<a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferrer" class="news-thumb-link"><img src="${safeUrl(i.image)}" class="news-thumb" loading="lazy" alt=""></a>` : ""}
+<div class="news-body-text"><a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferrer" class="news-title">${escapeHtml(i.title)}</a><span class="news-source">${escapeHtml(i.source)}</span></div>
 </div>`,
 			)
 			.join("");
@@ -1093,11 +1097,20 @@ ${i.image ? `<a href="${i.link}" target="_blank" class="news-thumb-link"><img sr
 		const ld = addMsg("Thinking…", "ai-msg-bot ai-msg-loading");
 		try {
 			const s = await getS(["openRouterKey"]);
+			if (!s.openRouterKey) {
+				ld.remove();
+				aiChatHistory.pop(); // Remove the user turn we just pushed
+				addMsg("Please add your OpenRouter API key in Settings ⚙️ to use AI Chat.", "ai-msg-bot");
+				return;
+			}
 			const resp = await msg("AI_CHAT", { query: q, history: aiChatHistory.slice(0, -1), openRouterKey: s.openRouterKey });
 			ld.remove();
 			if (resp && resp.success) {
 				aiChatHistory.push({ role: "assistant", content: resp.answer });
 				addMsg(resp.answer, "ai-msg-bot");
+			} else if (resp?.error === "NO_API_KEY") {
+				aiChatHistory.pop();
+				addMsg("Please add your OpenRouter API key in Settings ⚙️ to use AI Chat.", "ai-msg-bot");
 			} else {
 				addMsg("Could not get a response. Try rephrasing!", "ai-msg-bot");
 			}
@@ -1138,7 +1151,7 @@ ${i.image ? `<a href="${i.link}" target="_blank" class="news-thumb-link"><img sr
 		$("ai-news-content").innerHTML = items
 			.map(
 				(i) => `
-<div class="ai-news-item"><a href="${i.link}" target="_blank">${i.title}</a></div>`,
+<div class="ai-news-item"><a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(i.title)}</a></div>`,
 			)
 			.join("");
 	};
@@ -1211,10 +1224,10 @@ ${i.image ? `<a href="${i.link}" target="_blank" class="news-thumb-link"><img sr
 	const saveLayout = () => {
 		const blocks = [...grid.querySelectorAll(".block")];
 		const layout = blocks.map((b) => ({ id: b.dataset.blockId, size: b.dataset.size }));
-		setS({ blockLayout: layout });
+		setL({ blockLayout: layout }); // local storage — avoids sync quota and per-item 1KB limit
 	};
 	const restoreLayout = async () => {
-		const d = await getS(["blockLayout"]);
+		const d = await getL(["blockLayout"]);
 		if (!d.blockLayout) return;
 		const layout = d.blockLayout;
 		const blocks = [...grid.querySelectorAll(".block")];
@@ -1222,22 +1235,52 @@ ${i.image ? `<a href="${i.link}" target="_blank" class="news-thumb-link"><img sr
 		blocks.forEach((b) => {
 			map[b.dataset.blockId] = b;
 		});
-		// Restore order
+		// Restore saved order and sizes
+		const restoredIds = new Set();
 		layout.forEach((item) => {
 			if (map[item.id]) {
 				map[item.id].dataset.size = item.size || "1x1";
 				grid.appendChild(map[item.id]);
+				restoredIds.add(item.id);
+			}
+		});
+		// Append any blocks added in future extension updates that aren't in the saved layout
+		blocks.forEach((b) => {
+			if (!restoredIds.has(b.dataset.blockId)) {
+				grid.appendChild(b);
 			}
 		});
 	};
 
+	// ===== CUSTOM BACKGROUND IMAGE =====
+	const applyCustomBackground = async () => {
+		const d = await getL(["customBgImage"]);
+		const bgLayer = $("custom-bg-layer");
+		const bgOverlay = $("custom-bg-overlay");
+		if (d.customBgImage && bgLayer) {
+			bgLayer.style.backgroundImage = `url(${d.customBgImage})`;
+			bgLayer.classList.add("active");
+			bgOverlay.classList.add("active");
+		}
+	};
+
+	// ===== THEME =====
+	const applyTheme = async () => {
+		const s = await getS(["theme"]);
+		if (s.theme === "light") {
+			document.documentElement.setAttribute("data-theme", "light");
+		} else {
+			document.documentElement.removeAttribute("data-theme");
+		}
+	};
+
 	// ===== INIT =====
 	const init = async () => {
+		await applyTheme();
 		await restoreLayout();
+		await applyCustomBackground();
 		getS(["rssFeeds", "storiesFeeds", "storiesRssUrl"]).then((d) => {
-			// NOTE: We intentionally do NOT restore any cached background image here.
-			// Weather loads first, sets a solid color, then fetches a fresh image.
-			const feeds = d.rssFeeds || [{ name: "BBC News", url: "http://feeds.bbci.co.uk/news/rss.xml" }];
+			const feeds = d.rssFeeds || [{ name: "BBC News", url: "https://feeds.bbci.co.uk/news/rss.xml" }];
 			loadNews(feeds);
 			// Support new storiesFeeds array, fallback to old storiesRssUrl
 			let stFeeds = d.storiesFeeds;
@@ -1253,8 +1296,10 @@ ${i.image ? `<a href="${i.link}" target="_blank" class="news-thumb-link"><img sr
 		loadBookmarks();
 		loadQuote();
 		loadAINews();
-		loadAIGreeting();
+		syncAIKeyBtn();
+		syncAIChatBlockState();
 		document.body.classList.add("ready");
 	};
+
 	init();
 });

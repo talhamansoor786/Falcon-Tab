@@ -7,27 +7,20 @@
     "storage",
     "topSites",
     "bookmarks",
-    "favicon",
     "notifications"
   ],
   "chrome_url_overrides": {
     "newtab": "dashboard.html"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["api-guide.html", "icons/*", "images/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
   "host_permissions": [
-    "https://*.google.com/",
-    "https://api.open-meteo.com/*",
-    "https://api.bigdatacloud.net/*",
-    "http://ip-api.com/*",
-    "https://image.pollinations.ai/*",
-    "https://uselessfacts.jsph.pl/*",
-    "https://openrouter.ai/*",
-    "https://www.artificialintelligence-news.com/*",
-    "https://api.alquran.cloud/*",
-    "https://feeds.bbci.co.uk/*",
-    "https://unpkg.com/*",
-    "https://cdn.jsdelivr.net/*",
-    "http://*/*",
-    "https://*/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background/background.js"

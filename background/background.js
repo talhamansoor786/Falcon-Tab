@@ -52,12 +52,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	}
 
 	if (action === "FETCH_IP_LOCATION") {
-		fetch("http://ip-api.com/json/?fields=lat,lon,city,country")
+		fetch("https://freeipapi.com/api/json")
 			.then((r) => {
 				if (!r.ok) throw new Error(`HTTP ${r.status}`);
 				return r.json();
 			})
-			.then((data) => sendResponse({ success: true, data }))
+			.then((data) => {
+				sendResponse({
+					success: true,
+					data: {
+						lat: data.latitude,
+						lon: data.longitude,
+						city: data.cityName || "Unknown",
+						country: data.countryName || ""
+					}
+				});
+			})
 			.catch((e) => sendResponse({ success: false, error: e.message }));
 		return true;
 	}
@@ -65,24 +75,45 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if (action === "FETCH_QUOTE") {
 		const apiKey = request.apiKey;
 		if (!apiKey) {
-			sendResponse({ success: true, fact: "Enter your API Ninjas Key in settings to see daily quotes!" });
+			sendResponse({ success: false, error: "No API-Ninjas key provided" });
 			return true;
 		}
-		fetch("https://api.api-ninjas.com/v1/quotes", {
-			headers: { "X-Api-Key": apiKey },
-		})
-			.then((r) => {
-				if (!r.ok) throw new Error(`HTTP ${r.status}`);
-				return r.json();
-			})
-			.then((data) => {
-				if (data && data.length > 0) {
-					sendResponse({ success: true, fact: `"${data[0].quote}" — ${data[0].author}` });
-				} else {
-					throw new Error("No quote found");
+
+		const category = request.category || "inspirational";
+
+		// Helper: fetch one category from the stable v1 endpoint
+		const fetchCategory = async (cat) => {
+			const url = `https://api.api-ninjas.com/v1/quotes?category=${encodeURIComponent(cat)}`;
+			const r = await fetch(url, {
+				headers: { "X-Api-Key": apiKey },
+				cache: "no-store"
+			});
+			if (!r.ok) throw new Error(`HTTP ${r.status}`);
+			const data = await r.json();
+			// v1 returns an array; normalise to array just in case
+			const arr = Array.isArray(data) ? data : (data ? [data] : []);
+			return arr.find((item) => item && item.quote) || null;
+		};
+
+		(async () => {
+			try {
+				let q = await fetchCategory(category);
+
+				// If the category returned nothing, retry with a safe fallback
+				if (!q && category !== "inspirational") {
+					q = await fetchCategory("inspirational");
 				}
-			})
-			.catch((e) => sendResponse({ success: false, error: e.message }));
+
+				if (q) {
+					sendResponse({ success: true, fact: `"${q.quote}" — ${q.author || "Unknown"}` });
+				} else {
+					sendResponse({ success: false, error: "No quotes available" });
+				}
+			} catch (e) {
+				console.warn("API-Ninjas quote fetch failed:", e.message);
+				sendResponse({ success: false, error: e.message });
+			}
+		})();
 		return true;
 	}
 
@@ -113,41 +144,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		return true;
 	}
 
-	if (action === "FETCH_WALLPAPER") {
-		const query = request.query || "nature landscape";
-		const orientation = request.orientation || "landscape"; // landscape | portrait | squarish
-		const screenWidth = request.width || 1920;
-		const screenHeight = request.height || 1080;
-		const accessKey = "12x7NceM6PAMuqpn5EK__3QpcVUOhiXzXinlzk34Suw";
-
-		// Step 1 — orientation pre-filters Unsplash to the right general shape
-		const unsplashUrl = `https://api.unsplash.com/photos/random?client_id=${accessKey}&query=${encodeURIComponent(query)}&orientation=${orientation}`;
-		console.log("[FETCH_WALLPAPER]", unsplashUrl, "| Target:", screenWidth, "x", screenHeight);
-
-		fetch(unsplashUrl)
-			.then((r) => {
-				if (!r.ok) throw new Error(`HTTP ${r.status}`);
-				return r.json();
-			})
-			.then((data) => {
-				// Step 2 — urls.raw + Imgix params make the image EXACTLY the screen's ratio/size.
-				// Without this, Unsplash returns the photographer's native ratio (usually 3:2)
-				// regardless of orientation filter — causing letterboxing or pillarboxing.
-				// crop=entropy keeps the most visually interesting region when trimming edges.
-				const imageUrl = `${data.urls.raw}&w=${screenWidth}&h=${screenHeight}&fit=crop&crop=entropy&auto=format&q=85`;
-
-				sendResponse({ success: true, imageUrl });
-			})
-			.catch((e) => sendResponse({ success: false, error: e.message }));
-		return true;
-	}
-
 	// AI Chat — uses OpenRouter API (supports multiple LLM models)
 	if (action === "AI_CHAT") {
 		const query = request.query || "";
 		const model = request.model || "openai/gpt-oss-120b:free";
 		const history = request.history || [];
 		const OPENROUTER_API_KEY = request.openRouterKey;
+
+		if (!OPENROUTER_API_KEY) {
+			sendResponse({ success: false, error: "NO_API_KEY" });
+			return true;
+		}
 
 		const messages = [
 			{
@@ -200,7 +207,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		const timeStr = request.timeStr || "evening";
 		const style = request.style || "funny";
 		const model = request.model || "openai/gpt-oss-120b:free";
-		const OPENROUTER_API_KEY = request.openRouterKey || "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";
+		const OPENROUTER_API_KEY = request.openRouterKey;
+
+		// No key configured — return a graceful failure so the dashboard uses its static default
+		if (!OPENROUTER_API_KEY) {
+			sendResponse({ success: false, error: "NO_API_KEY" });
+			return true;
+		}
 
 		const messages = [
 			{
