@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Falcon Tab",
-  "version": "3.0",
-  "description": "A feature-rich, AI-powered new tab dashboard with weather, bookmarks, drag-drop layout, and more.",
+  "name": "Falcon New Tab",
+  "version": "3.0.0",
+  "description": "Falcon - Modern/Flexible/Customizable Tab with custom links, Bookmarks in a single view, drag-drop widgets, sorted RSS news, weather and much more.",
   "permissions": [
     "storage",
     "topSites",
@@ -12,12 +12,6 @@
   "chrome_url_overrides": {
     "newtab": "dashboard.html"
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["api-guide.html", "icons/*", "images/*"],
-      "matches": ["<all_urls>"]
-    }
-  ],
 
   "host_permissions": [
     "<all_urls>"

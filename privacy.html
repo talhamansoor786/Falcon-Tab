@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — Falcon New Tab</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f1117;
+            color: #e2e8f0;
+            line-height: 1.75;
+            padding: 2rem 1rem;
+        }
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+            background: #1a1d2e;
+            border-radius: 16px;
+            padding: 2.5rem 3rem;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.25rem;
+        }
+        .meta { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+        h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #7dd3fc;
+            margin-top: 2rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid rgba(125,211,252,0.15);
+        }
+        p { margin-bottom: 1rem; color: #cbd5e1; }
+        ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { color: #cbd5e1; margin-bottom: 0.4rem; }
+        strong { color: #e2e8f0; }
+        a { color: #7dd3fc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .badge {
+            display: inline-block;
+            background: rgba(125,211,252,0.1);
+            border: 1px solid rgba(125,211,252,0.3);
+            color: #7dd3fc;
+            border-radius: 6px;
+            padding: 0.15rem 0.6rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        footer { margin-top: 2.5rem; font-size: 0.85rem; color: #64748b; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦅 Privacy Policy</h1>
+        <p class="meta">Falcon New Tab &nbsp;·&nbsp; Last updated: June 2026</p>
+
+        <h2>Overview</h2>
+        <p>
+            Falcon New Tab is a Chrome browser extension that replaces the default new tab page with a
+            customizable productivity dashboard. This policy explains what data the extension accesses,
+            how it is used, and what we do (and do not) collect.
+        </p>
+
+        <h2>Data We Do NOT Collect</h2>
+        <p>Falcon New Tab <strong>does not</strong>:</p>
+        <ul>
+            <li>Collect, transmit, or sell any personal information.</li>
+            <li>Send your browsing history, bookmarks, or shortcuts to any server.</li>
+            <li>Use analytics, tracking pixels, or third-party telemetry SDKs.</li>
+            <li>Create or maintain user accounts.</li>
+            <li>Share data with advertisers or data brokers.</li>
+        </ul>
+
+        <h2>Data Stored Locally in Your Browser</h2>
+        <p>
+            All settings and preferences are stored exclusively in Chrome's built-in storage APIs
+            (<code>chrome.storage.local</code> and <code>chrome.storage.sync</code>) on your device.
+            This includes:
+        </p>
+        <ul>
+            <li>Your configured RSS feed URLs and shortcut links</li>
+            <li>Dashboard layout (block order and sizes)</li>
+            <li>Temperature unit preference and theme choice</li>
+            <li>Quick notes content</li>
+            <li>Custom background image (stored locally only)</li>
+            <li>Cached weather and news data (temporary, stored locally)</li>
+        </ul>
+        <p>
+            <code>chrome.storage.sync</code> data is synced by Chrome across your own signed-in devices
+            using Google's infrastructure — Falcon has no access to or visibility into this sync process.
+        </p>
+
+        <h2>Network Requests Made by the Extension</h2>
+        <p>The extension makes outbound requests solely to deliver its features:</p>
+        <ul>
+            <li>
+                <strong>Weather</strong> <span class="badge">Open-Meteo API</span><br>
+                Fetches current weather for your location from <code>api.open-meteo.com</code>.
+                Your approximate GPS coordinates (or IP-derived coordinates) are sent to this API.
+                Open-Meteo is a free, open-source weather API that does not require an API key and
+                does not track users. See their <a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener">terms</a>.
+            </li>
+            <li style="margin-top:0.75rem;">
+                <strong>Location (fallback)</strong> <span class="badge">BigDataCloud / FreeIPAPI</span><br>
+                If GPS is unavailable, an approximate location is derived from your IP address via
+                <code>api.bigdatacloud.net</code> and <code>freeipapi.com</code>. No account or
+                personal data is stored by these services beyond what is typical for any HTTP request.
+            </li>
+            <li style="margin-top:0.75rem;">
+                <strong>RSS Feeds</strong> <span class="badge">User-configured URLs</span><br>
+                Falcon fetches RSS feeds from URLs you explicitly configure in Settings.
+                Requests are made from the background service worker directly to the feed source.
+                No feed content passes through any Falcon-controlled server.
+            </li>
+            <li style="margin-top:0.75rem;">
+                <strong>Icons &amp; Fonts</strong> <span class="badge">CDN</span><br>
+                Site shortcut icons may be fetched from Google's favicon service
+                (<code>www.google.com/s2/favicons</code>) and Icons8 (<code>img.icons8.com</code>).
+                Weather condition icons are loaded from jsDelivr (<code>cdn.jsdelivr.net</code>).
+                Web fonts are loaded from Google Fonts (<code>fonts.googleapis.com</code>).
+                These are standard CDN requests and do not carry any personally identifying payload
+                beyond your IP address (standard for any web request).
+            </li>
+        </ul>
+
+        <h2>Permissions Explained</h2>
+        <ul>
+            <li><strong>storage</strong> — Save your settings and cached data locally.</li>
+            <li><strong>bookmarks</strong> — Display and search your Chrome bookmarks in the dashboard.</li>
+            <li><strong>topSites</strong> — Show your frequently visited sites in the Recent Sites widget.</li>
+            <li><strong>notifications</strong> — Send a browser notification when your focus timer session ends.</li>
+            <li><strong>host_permissions (&lt;all_urls&gt;)</strong> — Required to fetch RSS feeds from any domain
+                you choose to configure. Because users can add feeds from any website, the extension
+                cannot predict and enumerate every possible feed URL in advance.</li>
+        </ul>
+
+        <h2>Children's Privacy</h2>
+        <p>
+            Falcon New Tab does not knowingly collect data from children under 13. No personal
+            information is collected from any user, regardless of age.
+        </p>
+
+        <h2>Changes to This Policy</h2>
+        <p>
+            If this policy is updated, the "Last updated" date above will reflect the change.
+            Significant changes will be noted in the extension's version release notes.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+            If you have questions about this privacy policy, please open an issue on the
+            extension's GitHub repository or reach out via the Chrome Web Store support tab.
+        </p>
+
+        <footer>
+            Falcon New Tab &nbsp;·&nbsp; Privacy-first productivity dashboard &nbsp;·&nbsp; No data collected
+        </footer>
+    </div>
+</body>
+</html>

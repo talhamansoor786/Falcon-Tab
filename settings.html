@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Falcon Tab Settings</title>
+    <title>Falcon New Tab Settings</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="settings.css">
 </head>
@@ -11,7 +11,7 @@
         <a href="dashboard.html" id="close-link" class="close-cog">&#10006;</a>
     </div>
     <div class="container">
-        <h1>⚙️ Falcon Tab Settings</h1>
+        <h1>⚙️ Falcon New Tab Settings</h1>
 
         <div class="setting-card">
             <h2>🔍 Search Engine</h2>
@@ -56,12 +56,6 @@
 
 
         <div class="setting-card">
-            <h2>🧠 OpenRouter API Key</h2>
-            <p>Enter your OpenRouter API key for the AI Chat feature.</p>
-            <input type="text" id="openrouter-key" placeholder="Paste your OpenRouter API key here">
-        </div>
-
-        <div class="setting-card">
             <h2>🔗 Quick Links</h2>
             <p>Customize your shortcuts.</p>
             <div id="shortcuts-list"></div>
@@ -88,8 +82,46 @@
             <button id="reset-layout" class="btn-danger">Reset Layout</button>
         </div>
 
+        <div class="setting-card permissions-card">
+            <h2>🔐 Why Falcon Needs Permissions</h2>
+            <ul class="permissions-list">
+                <li>
+                    <span class="perm-icon">🔖</span>
+                    <div class="perm-info">
+                        <strong>Bookmarks</strong>
+                        <span>To display and search your bookmarks.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="perm-icon">⭐</span>
+                    <div class="perm-info">
+                        <strong>Top Sites</strong>
+                        <span>To show your frequently visited websites.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="perm-icon">🔔</span>
+                    <div class="perm-info">
+                        <strong>Notifications</strong>
+                        <span>To notify you when focus sessions end.</span>
+                    </div>
+                </li>
+                <li>
+                    <span class="perm-icon">📍</span>
+                    <div class="perm-info">
+                        <strong>Location</strong>
+                        <span>To retrieve your local weather automatically.</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
         <button id="save-settings" class="btn-primary">💾 Save and Close</button>
         <div id="status-message"></div>
+
+        <div class="privacy-footer">
+            <a href="https://dieticiangpt.alwaysdata.net/privacy.html" target="_blank" rel="noopener noreferrer">🔒 Privacy Policy</a>
+        </div>
     </div>
     <script src="settings.js"></script>
 </body>

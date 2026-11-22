@@ -121,12 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
 	// ===== LOAD SETTINGS =====
 	const loadSettings = () => {
 		chrome.storage.sync.get(
-			["searchEngine", "rssFeeds", "userShortcuts", "tempUnit", "storiesRssUrl", "storiesFeeds", "openRouterKey", "theme"],
+			["searchEngine", "rssFeeds", "userShortcuts", "tempUnit", "storiesRssUrl", "storiesFeeds", "theme"],
 			(d) => {
 				theme = d.theme || "dark";
 				applyThemeUI(theme);
 				$("search-engine").value = d.searchEngine || "https://www.google.com/search?q=";
-				$("openrouter-key").value = d.openRouterKey || "";
 				tempUnit = d.tempUnit || "C";
 				if (tempUnit === "F") {
 					$("temp-f").classList.add("active");
@@ -239,12 +238,10 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 		});
 
-		// Handle background image save
 		const saveSync = () => {
 			chrome.storage.sync.set(
 				{
 					searchEngine: $("search-engine").value,
-					openRouterKey: $("openrouter-key").value.trim(),
 					storiesFeeds,
 					rssFeeds,
 					userShortcuts,
@@ -252,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					theme,
 				},
 				() => {
-					chrome.storage.local.remove(["weatherCache", "wallpaperCache", "storiesCache", "aiGreetingCache", "quoteCache"]);
+					chrome.storage.local.remove(["weatherCache", "wallpaperCache", "storiesCache", "quoteCache"]);
 					// Also remove old storiesRssUrl key
 					chrome.storage.sync.remove("storiesRssUrl");
 					$("status-message").textContent = "✓ Saved!";

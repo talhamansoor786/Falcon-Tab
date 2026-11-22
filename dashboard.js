@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// ===== WEATHER =====
 	const getMeteocon = (code, isDay) => {
-		const base = "https://cdn.jsdelivr.net/npm/@bybas/weather-icons@latest/production/fill/all/";
+		const base = "https://cdn.jsdelivr.net/npm/@bybas/weather-icons@2.0.0/production/fill/all/";
 		if (code <= 1) return base + (isDay ? "clear-day.svg" : "clear-night.svg");
 		if (code === 2) return base + (isDay ? "partly-cloudy-day.svg" : "partly-cloudy-night.svg");
 		if (code === 3) return base + "overcast.svg";
@@ -553,27 +553,6 @@ ${animationsHTML}
 		}
 	};
 
-	// ===== AI KEY BUTTON VISIBILITY =====
-	const syncAIKeyBtn = async () => {
-		const s = await getS(["openRouterKey"]);
-		const btn = $("ai-key-guide-btn");
-		if (!btn) return;
-		// Show the "Get API Key" button only when no key is configured
-		btn.style.display = s.openRouterKey ? "none" : "";
-	};
-	// Also make the block controls always visible when key is missing
-	// (override the hover-only opacity rule via an inline flag on the block)
-	const syncAIChatBlockState = async () => {
-		const s = await getS(["openRouterKey"]);
-		const block = document.querySelector('.block[data-block-id="aichat"]');
-		if (!block) return;
-		if (!s.openRouterKey) {
-			block.classList.add("key-missing");
-		} else {
-			block.classList.remove("key-missing");
-		}
-	};
-
 
 	// ===== STORIES (infinite horizontal scroll, multiple feeds) =====
 	let allStoryItems = [];
@@ -756,26 +735,65 @@ ${animationsHTML}
 		"copilot.microsoft": "copilot",
 	};
 
-	const getIconForUrl = (url) => {
+	// Returns an Icons8 icon name for known brands, or null for unknown domains
+	const getIconNameForUrl = (url) => {
 		try {
 			const h = new URL(url).hostname.toLowerCase();
 			for (const [key, icon] of Object.entries(domainToIcon)) {
 				if (h.includes(key)) return icon;
 			}
-			return "domain";
+			return null; // unknown — will fall back to Google favicon service
 		} catch (e) {
-			return "domain";
+			return null;
+		}
+	};
+
+	// Returns the best available icon URL for a given site URL
+	const getIconSrcForUrl = (url, size = 48) => {
+		const icon = getIconNameForUrl(url);
+		if (icon) {
+			return `https://img.icons8.com/color/${size}/000000/${icon}.png`;
+		}
+		// Fall back to Google's reliable favicon service for any unknown domain
+		try {
+			const domain = new URL(url).hostname;
+			return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${size}`;
+		} catch (e) {
+			return `https://img.icons8.com/color/${size}/000000/domain.png`;
 		}
 	};
 
 	const renderGrid = (el, items) => {
-		el.innerHTML = items
-			.map(
-				(i) => `<a href="${i.url}" class="shortcut-item" title="${i.title}">
-<img src="https://img.icons8.com/color/48/000000/${getIconForUrl(i.url)}.png" class="shortcut-icon" alt="">
-<span class="shortcut-title">${i.title}</span></a>`,
-			)
-			.join("");
+		el.innerHTML = "";
+		items.forEach((i) => {
+			const a = document.createElement("a");
+			a.href = safeUrl(i.url);
+			a.className = "shortcut-item";
+			a.title = i.title || "";
+
+			const img = document.createElement("img");
+			img.src = getIconSrcForUrl(i.url, 48);
+			img.className = "shortcut-icon";
+			img.alt = "";
+			img.addEventListener(
+				"error",
+				() => {
+					try {
+						const domain = new URL(i.url).hostname;
+						img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=48`;
+					} catch (e) {}
+				},
+				{ once: true }
+			);
+
+			const span = document.createElement("span");
+			span.className = "shortcut-title";
+			span.textContent = i.title || "";
+
+			a.appendChild(img);
+			a.appendChild(span);
+			el.appendChild(a);
+		});
 	};
 	const loadShortcuts = async () => {
 		const d = await getS(["userShortcuts"]);
@@ -800,9 +818,29 @@ ${animationsHTML}
 		if (n.url) {
 			const a = document.createElement("a");
 			a.className = "bm-bookmark";
-			a.href = n.url;
+			a.href = safeUrl(n.url);
 			a.title = n.title || n.url;
-			a.innerHTML = `<img src="https://img.icons8.com/color/24/000000/${getIconForUrl(n.url)}.png" class="bm-bookmark-icon" alt=""><span>${escapeHtml(n.title || n.url)}</span>`;
+
+			const img = document.createElement("img");
+			img.src = getIconSrcForUrl(n.url, 24);
+			img.className = "bm-bookmark-icon";
+			img.alt = "";
+			img.addEventListener(
+				"error",
+				() => {
+					try {
+						const domain = new URL(n.url).hostname;
+						img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=24`;
+					} catch (e) {}
+				},
+				{ once: true }
+			);
+
+			const span = document.createElement("span");
+			span.textContent = n.title || n.url;
+
+			a.appendChild(img);
+			a.appendChild(span);
 			return a;
 		}
 		if (n.children && n.children.length) {
@@ -838,7 +876,71 @@ ${animationsHTML}
 		});
 		if (!t.children.length) t.innerHTML = '<div class="bm-no-results">No bookmarks</div>';
 	};
+	let isBmDragInitialized = false;
+	const setupBookmarkDragScroll = () => {
+		if (isBmDragInitialized) return;
+		const tree = $("bookmarks-tree");
+		if (!tree) return;
+		isBmDragInitialized = true;
+
+		let isDown = false;
+		let startY = 0;
+		let startX = 0;
+		let scrollTop = 0;
+		let scrollLeft = 0;
+		let isDragging = false;
+
+		tree.addEventListener("mousedown", (e) => {
+			if (e.button !== 0) return;
+			isDown = true;
+			isDragging = false;
+			startY = e.pageY;
+			startX = e.pageX;
+			scrollTop = tree.scrollTop;
+			scrollLeft = tree.scrollLeft;
+		});
+
+		window.addEventListener("mousemove", (e) => {
+			if (!isDown) return;
+			const dy = e.pageY - startY;
+			const dx = e.pageX - startX;
+
+			if (!isDragging && (Math.abs(dy) > 4 || Math.abs(dx) > 4)) {
+				isDragging = true;
+				tree.classList.add("is-dragging");
+			}
+
+			if (isDragging) {
+				e.preventDefault();
+				tree.scrollTop = scrollTop - dy;
+				tree.scrollLeft = scrollLeft - dx;
+			}
+		});
+
+		window.addEventListener("mouseup", () => {
+			if (isDown) {
+				isDown = false;
+				setTimeout(() => {
+					tree.classList.remove("is-dragging");
+				}, 0);
+			}
+		});
+
+		tree.addEventListener(
+			"click",
+			(e) => {
+				if (isDragging) {
+					e.preventDefault();
+					e.stopPropagation();
+					isDragging = false;
+				}
+			},
+			true
+		);
+	};
+
 	const loadBookmarks = () => {
+		setupBookmarkDragScroll();
 		chrome.bookmarks.getTree((t) => {
 			if (chrome.runtime.lastError || !t) {
 				console.warn("Bookmarks unavailable:", chrome.runtime.lastError?.message);
@@ -874,7 +976,28 @@ ${animationsHTML}
 					const a = document.createElement("a");
 					a.className = "bm-bookmark";
 					a.href = safeUrl(bm.url);
-					a.innerHTML = `<img src="https://img.icons8.com/color/24/000000/${getIconForUrl(bm.url)}.png" class="bm-bookmark-icon" alt=""><span>${escapeHtml(bm.title || bm.url)}</span>`;
+					a.title = bm.title || bm.url;
+
+					const img = document.createElement("img");
+					img.src = getIconSrcForUrl(bm.url, 24);
+					img.className = "bm-bookmark-icon";
+					img.alt = "";
+					img.addEventListener(
+						"error",
+						() => {
+							try {
+								const domain = new URL(bm.url).hostname;
+								img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=24`;
+							} catch (e) {}
+						},
+						{ once: true }
+					);
+
+					const span = document.createElement("span");
+					span.textContent = bm.title || bm.url;
+
+					a.appendChild(img);
+					a.appendChild(span);
 					t.appendChild(a);
 				});
 			});
@@ -988,6 +1111,20 @@ ${animationsHTML}
 		} catch (e) {}
 		return null;
 	};
+	const getRelativeTime = (timestamp) => {
+		if (!timestamp) return "";
+		const diff = Date.now() - timestamp;
+		if (diff < 0) return "just now";
+		const mins = Math.round(diff / 60000);
+		if (mins < 1) return "just now";
+		if (mins < 60) return `${mins}m ago`;
+		const hours = Math.round(mins / 60);
+		if (hours < 24) return `${hours}h ago`;
+		const days = Math.round(hours / 24);
+		if (days < 30) return `${days}d ago`;
+		const d = new Date(timestamp);
+		return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+	};
 	const loadNews = async (feeds) => {
 		const CK = "newsCache",
 			TTL = 30 * 60 * 1000,
@@ -1020,13 +1157,27 @@ ${animationsHTML}
 									try {
 										if (image && !/^https?:\/\//i.test(image)) image = new URL(image, f.url).href;
 									} catch (e) {}
-									return { title, link, source: f.name, image };
+
+									// Extract publication date
+									const pubDateEl = item.querySelector("pubDate, pubdate, published, updated, dc\\:date");
+									const dateStr = pubDateEl ? pubDateEl.textContent : "";
+									let dateVal = 0;
+									if (dateStr) {
+										const parsed = Date.parse(dateStr);
+										if (!isNaN(parsed)) {
+											dateVal = parsed;
+										}
+									}
+
+									return { title, link, source: f.name, image, date: dateVal };
 								});
 						})
 						.catch(() => []),
 				),
 			);
 			const articles = nested.flat();
+			// Sort newest first. If dateVal is 0 (missing date), place it at the end.
+			articles.sort((a, b) => (b.date || 0) - (a.date || 0));
 			await setL({ [CK]: { feedUrls: feeds.map((f) => f.url), articles, ts: Date.now() } });
 			$("news-stats").textContent = `${articles.length} articles · just now`;
 			if (!articles.length) {
@@ -1044,81 +1195,11 @@ ${animationsHTML}
 				(i) => `
 <div class="news-item">
 ${i.image ? `<a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferrer" class="news-thumb-link"><img src="${safeUrl(i.image)}" class="news-thumb" loading="lazy" alt=""></a>` : ""}
-<div class="news-body-text"><a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferrer" class="news-title">${escapeHtml(i.title)}</a><span class="news-source">${escapeHtml(i.source)}</span></div>
+<div class="news-body-text"><a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferrer" class="news-title">${escapeHtml(i.title)}</a><span class="news-source">${escapeHtml(i.source)}${i.date ? ` · ${getRelativeTime(i.date)}` : ""}</span></div>
 </div>`,
 			)
 			.join("");
 	};
-
-	// ===== AI CHAT (via background worker — OpenRouter) =====
-	const chatForm = $("ai-chat-form"),
-		chatInput = $("ai-chat-input"),
-		chatMsgs = $("ai-chat-messages");
-	let aiChatHistory = [];
-	const addMsg = (text, cls) => {
-		const d = document.createElement("div");
-		d.className = "ai-msg " + cls;
-		const textNode = document.createElement("div");
-		textNode.className = "ai-msg-text";
-		textNode.textContent = text;
-		d.appendChild(textNode);
-
-		if (cls.includes("ai-msg-bot") && !cls.includes("ai-msg-loading")) {
-			const copyBtn = document.createElement("button");
-			copyBtn.className = "ai-copy-btn";
-			copyBtn.title = "Copy to clipboard";
-			copyBtn.innerHTML =
-				'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-			copyBtn.onclick = () => {
-				navigator.clipboard.writeText(text);
-				copyBtn.innerHTML =
-					'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64b5f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-				setTimeout(() => {
-					copyBtn.innerHTML =
-						'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-				}, 2000);
-			};
-			d.appendChild(copyBtn);
-		}
-
-		chatMsgs.appendChild(d);
-		chatMsgs.scrollTop = chatMsgs.scrollHeight;
-		return d;
-	};
-	chatForm.addEventListener("submit", async (e) => {
-		e.preventDefault();
-		const q = chatInput.value.trim();
-		if (!q) return;
-		addMsg(q, "ai-msg-user");
-		chatInput.value = "";
-		// Keep rolling history (last 10 turns = 20 messages) for multi-turn context
-		aiChatHistory.push({ role: "user", content: q });
-		if (aiChatHistory.length > 20) aiChatHistory = aiChatHistory.slice(-20);
-		const ld = addMsg("Thinking…", "ai-msg-bot ai-msg-loading");
-		try {
-			const s = await getS(["openRouterKey"]);
-			if (!s.openRouterKey) {
-				ld.remove();
-				aiChatHistory.pop(); // Remove the user turn we just pushed
-				addMsg("Please add your OpenRouter API key in Settings ⚙️ to use AI Chat.", "ai-msg-bot");
-				return;
-			}
-			const resp = await msg("AI_CHAT", { query: q, history: aiChatHistory.slice(0, -1), openRouterKey: s.openRouterKey });
-			ld.remove();
-			if (resp && resp.success) {
-				aiChatHistory.push({ role: "assistant", content: resp.answer });
-				addMsg(resp.answer, "ai-msg-bot");
-			} else if (resp?.error === "NO_API_KEY") {
-				aiChatHistory.pop();
-				addMsg("Please add your OpenRouter API key in Settings ⚙️ to use AI Chat.", "ai-msg-bot");
-			} else {
-				addMsg("Could not get a response. Try rephrasing!", "ai-msg-bot");
-			}
-		} catch (err) {
-			ld.remove();
-			addMsg("AI is unavailable right now.", "ai-msg-bot");
-		}
-	});
 
 	// ===== AI NEWS =====
 	const loadAINews = async () => {
@@ -1296,8 +1377,6 @@ ${i.image ? `<a href="${safeUrl(i.link)}" target="_blank" rel="noopener noreferr
 		loadBookmarks();
 		loadQuote();
 		loadAINews();
-		syncAIKeyBtn();
-		syncAIChatBlockState();
 		document.body.classList.add("ready");
 	};
 
