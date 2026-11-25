@@ -134,7 +134,7 @@ body.ready{opacity:1}
 
 
 /* ===== TOP SECTION ===== */
-.container{max-width:1500px;margin:0 auto}
+.container{width:100%;margin:0 auto}
 .top-section{text-align:center;margin-bottom:52px;padding-top:24px}
 .clock{font-size:4.2rem;font-weight:700;letter-spacing:-2px;line-height:1;margin-bottom:10px;font-variant-numeric:tabular-nums;color:var(--text)}
 .date-display{font-size:.95rem;font-weight:400;color:var(--text-soft);margin-bottom:28px;letter-spacing:.3px}
@@ -572,31 +572,51 @@ body.ready{opacity:1}
 .save-indicator.visible{opacity:.5}
 
 /* ===== FOCUS TIMER ===== */
-.timer-body{display:flex;flex-direction:column;align-items:center;gap:12px}
-.timer-ring-wrapper{position:relative;width:100px;height:100px}
+.timer-body{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:clamp(8px,4cqmin,22px);
+    padding:10px 20px 14px;
+    container-type:size;
+    min-height:220px;
+}
+.timer-ring-wrapper{
+    position:relative;
+    width:clamp(100px,48cqmin,260px);
+    height:clamp(100px,48cqmin,260px);
+    flex-shrink:0;
+}
 .timer-ring{width:100%;height:100%;transform:rotate(-90deg)}
 .timer-ring-bg{fill:none;stroke:var(--border);stroke-width:5}
 .timer-ring-progress{fill:none;stroke:rgba(var(--accent-rgb),0.6);stroke-width:5;stroke-linecap:round;stroke-dasharray:339.292;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear}
-.timer-display{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
-.timer-controls{display:flex;gap:8px}
+.timer-display{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:clamp(1.4rem,11.5cqmin,3.4rem);
+    font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);
+}
+.timer-controls{display:flex;gap:clamp(8px,4cqmin,18px)}
 .timer-btn{
-    width:36px;height:36px;border-radius:50%;border:1px solid var(--border-strong);
+    width:clamp(42px,16cqmin,72px);
+    height:clamp(42px,16cqmin,72px);
+    border-radius:50%;border:1px solid var(--border-strong);
     background:var(--border);color:var(--text-soft);font-size:.95rem;
     cursor:pointer;transition:all .2s ease;display:flex;align-items:center;justify-content:center;
 }
+.timer-btn img{width:60%;height:60%;object-fit:contain;display:block}
 .timer-btn:hover{background:var(--border-hover);color:var(--text);transform:scale(1.1)}
-.timer-presets{display:flex;gap:5px}
+.timer-presets{display:flex;gap:clamp(5px,2.5cqmin,12px)}
 .timer-preset{
-    padding:4px 10px;border-radius:16px;border:1px solid var(--border);
+    padding:clamp(4px,1.8cqmin,9px) clamp(10px,4.5cqmin,22px);
+    border-radius:16px;border:1px solid var(--border);
     background:var(--border);color:var(--text-muted);
-    font-size:.72rem;cursor:pointer;transition:all .2s ease;font-family:inherit;
+    font-size:clamp(.72rem,4.5cqmin,1.05rem);
+    cursor:pointer;transition:all .2s ease;font-family:inherit;
 }
 .timer-preset:hover{background:var(--border-hover);color:var(--text)}
 .timer-preset.active{background:var(--accent-bg);color:var(--accent);border-color:rgba(var(--accent-rgb),.2)}
 
 /* ===== NEWS ===== */
 .news-body{display:flex;flex-direction:column;overflow:hidden}
-#news-content{flex:1;overflow-y:auto;min-height:0;max-height:500px;padding-right:4px}
+#news-content{flex:1 1 0;overflow-y:auto;min-height:180px;contain:size;padding-right:4px}
 .news-item{
     padding:11px 0;border-bottom:1px solid var(--border);
     display:flex;gap:10px;align-items:flex-start;transition:all .2s ease;
@@ -613,7 +633,7 @@ body.ready{opacity:1}
 .placeholder{text-align:center;color:var(--text-muted);padding:16px 0;font-size:.85rem}
 
 /* ===== AI NEWS ===== */
-.ai-news-body{overflow-y:auto;max-height:280px}
+.ai-news-body{overflow-y:auto;flex:1 1 0;min-height:240px;contain:size}
 .ai-news-item{padding:9px 0;border-bottom:1px solid var(--border)}
 .ai-news-item:last-child{border-bottom:none}
 .ai-news-item a{color:var(--text-soft);text-decoration:none;font-size:.82rem;line-height:1.4;transition:color .2s ease}
